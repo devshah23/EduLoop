@@ -1,0 +1,39 @@
+from pydantic import BaseModel, EmailStr, StringConstraints, field_validator
+from typing import Annotated, List, Optional
+from app.schemas.submission_schema import SubmissionRead
+
+TrimmedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class StudentBase(BaseModel):
+    name: TrimmedStr
+    email: EmailStr
+    updated_by: Optional[int] = None
+    class_id: Optional[int] = None
+
+    class Config:
+        orm_mode = True
+
+
+
+class StudentCreate(StudentBase):
+    password: str
+
+
+
+class StudentUpdate(StudentBase):
+    pass
+    
+
+
+
+class StudentRead(StudentBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+
+class StudentReadWithSubmissions(StudentRead):
+    submissions: List[SubmissionRead] = [] 

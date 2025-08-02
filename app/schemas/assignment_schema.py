@@ -1,0 +1,73 @@
+from pydantic import BaseModel, Field
+from datetime import datetime
+from typing import List, Optional
+
+from app.schemas.question_schema import  QuestionRead
+
+
+class AssignmentBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    due_date: datetime
+    class_id: int
+    created_at: datetime = Field(default_factory=datetime.now)
+    questions: Optional[List[int]] = None  
+    class Config:
+        from_attributes = True
+
+class AssignmentMain(AssignmentBase):
+    id: int
+    created_by: int
+
+    class Config:
+        from_attributes = True
+
+
+class AssignmentCreate(AssignmentBase):
+    pass
+
+
+class AssignmentUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    due_date: Optional[datetime] = None
+    class_id: Optional[int] = None
+    questions: Optional[List[int]] = None  
+    class Config:
+        from_attributes = True
+    
+
+
+class AssignmentRead(BaseModel):
+    title: str
+    description: Optional[str] = None
+    due_date: datetime
+    class_id: int
+    created_at: datetime = Field(default_factory=datetime.now)
+    questions:Optional[List[QuestionRead]] = None
+    created_by: int
+    class Config:
+        from_attributes = True
+
+class AssignmentOut(BaseModel):
+    id: int
+    title: str
+    description: str | None
+    due_date: datetime
+    created_by: int
+    created_at: datetime
+    class_id: int
+    questions: List[int] 
+
+    @classmethod
+    def from_orm_with_ids(cls, assignment):
+        return cls(
+            id=assignment.id,
+            title=assignment.title,
+            description=assignment.description,
+            due_date=assignment.due_date,
+            created_by=assignment.created_by,
+            created_at=assignment.created_at,
+            class_id=assignment.class_id,
+            questions=[q.id for q in assignment.questions]
+        )
