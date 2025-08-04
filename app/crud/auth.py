@@ -1,5 +1,5 @@
 from typing import cast
-from fastapi import  status
+from fastapi import  HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,14 +9,14 @@ from app.auth.password import get_password_hash, verify_password
 from app.models.class_model import Class
 from app.models.faculty_model import Faculty
 from app.models.student_model import Student
-from app.schemas.auth_schema import LoginRequest, SignupRequest, UserTypeEnum
+from app.schemas.auth_schema import CurrentUser, LoginRequest, SignupRequest, UserTypeEnum
 from app.utils.exception import AppException, exception_handler
 from os import getenv
 from sqlalchemy.orm import selectinload
 
 COOKIE_NAME=getenv("COOKIE_NAME", "SubmitAssignment")
 
-async def get_student_by_email( db: AsyncSession,email: str,) -> Student | None:
+async def get_student_by_email( db: AsyncSession,email: str,):
     result = await db.execute(select(Student).where(Student.email == email))
     return result.scalar_one_or_none()
 
@@ -47,7 +47,7 @@ async def login(db: AsyncSession,request_data: LoginRequest):
 
     value = create_access_token(data=token_data)
     response = JSONResponse(content={"message": "Login successful"})
-    response=create_cookie(response,COOKIE_NAME,value,3600)
+    response=create_cookie(response,COOKIE_NAME,value,3600*24)
     return response
 
 @exception_handler()
@@ -73,9 +73,27 @@ async def signup( db: AsyncSession,request_data: SignupRequest):
     await db.commit()
     await db.refresh(new_student)
     response= JSONResponse(content={"message": "Signup successful"}, status_code=status.HTTP_201_CREATED)
-    value=create_access_token(data={"sub": new_student.email, "name": new_student.name, "type": UserTypeEnum.STUDENT, "class_id": exist_class.id})
-    response=create_cookie(response,COOKIE_NAME,value,3600)
     return response
+
+@exception_handler()
+async def update_student(db: AsyncSession,request_data,id:int,current_user:CurrentUser):
+    result=await db.execute(select(Student).where(Student.id==id))
+    student=result.scalar_one_or_none()
+    if not student:
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found",
+        )
+    
+    request_data.password=get_password_hash(request_data.password) if request_data.password else student.password
+    for field, value in request_data.dict(exclude_unset=True).items():
+        setattr(student, field, value)
+    student.updated_by = current_user.id
+    await db.commit()
+    await db.refresh(student)
+    
+    return JSONResponse(content={"message": "Student updated successfully"}, status_code=status.HTTP_200_OK)
+    
 
 @exception_handler()
 def logout():

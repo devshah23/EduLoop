@@ -8,29 +8,23 @@ class UserTypeEnum(str, Enum):
     FACULTY="faculty"
     STUDENT="student"
 
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class TokenData(BaseModel):
-    email: EmailStr
-    name: str | None = None
-    type: UserTypeEnum
-    class_id: str | None = None
-
-
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
     role: UserTypeEnum
-
 
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str
     name: str
     class_id: int | None = None 
+
+class UpdateStudent(BaseModel):
+    name:Optional[str]
+    class_id:Optional[int]
+    email:Optional[EmailStr]
+    password: Optional[str]
+    
 
 class CurrentUser(BaseModel):
     id: int

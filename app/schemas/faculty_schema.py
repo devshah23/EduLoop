@@ -8,10 +8,11 @@ class FacultyBase(BaseModel):
     email: EmailStr
     updated_by: Optional[int] = None
 
+class FacultyInDB(FacultyBase):
+    id:int
 
 class FacultyCreate(FacultyBase):
     password: TrimmedStr
-
 
 class FacultyUpdate(BaseModel):
     name: Optional[str] = None
@@ -19,8 +20,6 @@ class FacultyUpdate(BaseModel):
     password: Optional[str] = None
     updated_by: Optional[int] = None
 
-class FacultyRead(FacultyBase):
-    id: int
-
+class FacultyRead(FacultyInDB):
     class Config:
         orm_mode = True

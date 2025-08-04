@@ -7,20 +7,18 @@ class ClassBase(BaseModel):
     name: TrimmedStr
     faculty_id: int
 
-class Class(ClassBase):
+class ClassInDb(ClassBase):
     id:int
     updated_by: Optional[int] = None
+
 
 class ClassCreate(ClassBase):
     updated_by: Optional[int] = None
 
 
 
-class ClassUpdate(Class):
-    pass    
+class ClassUpdate(ClassInDb):
+    name:Optional[TrimmedStr]
+    faculty_id: Optional[int]
+        
 
-class ClassRead(ClassBase):
-    id: int
-
-    class Config:
-        orm_mode = True

@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.auth.roles import require_role
 from app.models.assignment_model import Assignment
 from app.models.question_model import Question
-from app.schemas.assignment_schema import AssignmentCreate, AssignmentMain, AssignmentOut, AssignmentRead, AssignmentUpdate
+from app.schemas.assignment_schema import AssignmentCreate, AssignmentOut, AssignmentRead, AssignmentUpdate
 from app.schemas.auth_schema import CurrentUser
 from app.utils.exception import exception_handler
 
@@ -36,22 +36,12 @@ async def create_assignment(
     db.add(new_assignment)
     await db.commit()
     await db.refresh(new_assignment)
-    stmt = (
-    select(Assignment)
-    .options(selectinload(Assignment.questions))
-    .where(Assignment.id == new_assignment.id)
-)
-    result = await db.execute(stmt)
-    assignment_with_questions = result.scalar_one()
-    assignment_dict = assignment_with_questions.__dict__.copy()
-    assignment_dict["questions"] = [q.id for q in assignment_with_questions.questions]
-
     
-    return ORJSONResponse(
+    return JSONResponse(
         status_code=201,
         content={
             "message": "Assignment created successfully",
-            "assignment": AssignmentMain.model_validate(assignment_dict).model_dump()
+            "assignment_id":new_assignment.id
         }
     )
 
@@ -61,17 +51,18 @@ async def get_assignment(db: AsyncSession, assignment_id: int):
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id).options(selectinload(Assignment.questions)))
     assignment= result.scalar_one_or_none()
     if not assignment:
-        return HTTPException(status_code=404, detail="Assignment not found")
+        raise HTTPException(status_code=404, detail="Assignment not found")
     return assignment
 
 @exception_handler()
-async def get_assignments(db: AsyncSession):
+async def get_assignments(db: AsyncSession,page):
     result = await db.execute(
-    select(Assignment).options(selectinload(Assignment.questions).load_only(Question.id))
+    select(Assignment).options(selectinload(Assignment.questions).load_only(Question.id)).order_by(Assignment.created_at.desc()).offset((page-1)*10).limit(10)
 )
     assignments = result.scalars().all()
 
-    assignments_data = [AssignmentOut.from_orm_with_ids(a).model_dump() for a in assignments]
+    #Custom method to convert QuestionObject to List of IDs 
+    assignments_data = [AssignmentOut.from_orm_with_ids(a).model_dump() for a in assignments] 
 
     return ORJSONResponse(
         status_code=200,
@@ -81,11 +72,42 @@ async def get_assignments(db: AsyncSession):
     }
 )
 
+@exception_handler()
+async def get_assignments_by_me(db:AsyncSession,current_user:CurrentUser,page:int):
+    result=await db.execute(select(Assignment).where(Assignment.id==current_user.id).options(selectinload(Assignment.questions).load_only(Question.id)).order_by(Assignment.created_at.desc()).offset((page-1)*10).limit(10))
+    assignments = result.scalars().all()
+    assignments_data = [AssignmentOut.from_orm_with_ids(a).model_dump() for a in assignments]
+    return ORJSONResponse(
+        status_code=200,
+        content={
+            "message": "Assignments retrieved successfully",
+            "assignments": assignments_data
+        }
+    )
+
+
+@exception_handler()
+async def get_assignments_for_me(db: AsyncSession, current_user: CurrentUser, page: int):
+    result = await db.execute(
+        select(Assignment)
+        .where(Assignment.class_id == current_user.class_id)
+        .options(selectinload(Assignment.questions).load_only(Question.id))
+        .order_by(Assignment.created_at.desc()).offset((page-1)*10).limit(10)
+    )
+    assignments = result.scalars().all()
+    assignments_data = [AssignmentOut.from_orm_with_ids(a).model_dump() for a in assignments]
+    return ORJSONResponse(
+        status_code=200,
+        content={
+            "message": "Assignments retrieved successfully",
+            "assignments": assignments_data
+        }
+    )
 
 
 @exception_handler()
 async def update_assignment(
-    db: AsyncSession, assignment_id: int, assignment_data: AssignmentUpdate
+    db: AsyncSession, assignment_id: int, assignment_data: AssignmentUpdate,current_user
 ):
     result = await db.execute(
         select(Assignment)
@@ -93,9 +115,16 @@ async def update_assignment(
         .options(selectinload(Assignment.questions))
     )
     assignment = result.scalar_one_or_none()
+    
+    
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
-
+    
+    
+    if assignment.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="You do not have permission to update this assignment")
+    
+    
     for key, value in assignment_data.model_dump(exclude_unset=True).items():
         if key != "questions": 
             setattr(assignment, key, value)

@@ -30,7 +30,6 @@ async def grade_sumbmission(correct_answer: list, student_answer: list,submissio
             avg=sum(per_question_result)/len(per_question_result)
             print(f"Grading result: {avg}")
             
-            # validate avg
             if avg < 0 or avg > 100:
                 print(f'Something went wrong with grading submission-{submission_id}')
             

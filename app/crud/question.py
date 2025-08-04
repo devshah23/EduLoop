@@ -27,7 +27,9 @@ async def get_question(db: AsyncSession, question_id: int):
     question= result.scalar_one_or_none()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
-    return question
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"message": "Question retrieved successfully", "question": QuestionRead.model_validate(question).model_dump()})
 
 
 @exception_handler()
@@ -50,7 +52,7 @@ async def delete_question(db: AsyncSession, question_id: int):
     question = result.scalar_one_or_none()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
-    if question:
-        await db.delete(question)
-        await db.commit()
+    
+    await db.delete(question)
+    await db.commit()
     return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Question deleted successfully"})

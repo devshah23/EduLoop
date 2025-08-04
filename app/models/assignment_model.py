@@ -16,7 +16,7 @@ class Assignment(Base):
     description: Mapped[str] = mapped_column(String, nullable=True)
     due_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_by: Mapped[int] = mapped_column(ForeignKey("faculties.id"), nullable=False)
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     class_id: Mapped[int] = mapped_column(ForeignKey("classes.id"), nullable=False)
 
     # Relationships

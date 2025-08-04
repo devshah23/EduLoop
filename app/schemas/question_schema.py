@@ -7,12 +7,8 @@ class QuestionBase(BaseModel):
     text: TrimmedStr
     answer: TrimmedStr
 
-
-
-
 class QuestionCreate(QuestionBase):
     pass
-
 
 
 class QuestionUpdate(BaseModel):
@@ -20,10 +16,8 @@ class QuestionUpdate(BaseModel):
     answer: Optional[str] = None
 
 
-
 class QuestionRead(QuestionBase):
     id: int
-
     class Config:
         from_attributes = True
 

@@ -22,7 +22,10 @@ class StudentCreate(StudentBase):
 
 
 class StudentUpdate(StudentBase):
-    pass
+    name: Optional[TrimmedStr]
+    email: Optional[EmailStr]
+    password: Optional[str]
+    
     
 
 

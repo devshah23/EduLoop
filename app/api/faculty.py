@@ -10,32 +10,27 @@ from app.crud import faculty as faculty_crud
 
 router = APIRouter(prefix="/faculties", tags=["Faculties"])
 
-@router.post("/", response_model=FacultyRead, status_code=status.HTTP_201_CREATED)
+@router.post("/")
 async def create_faculty(faculty: FacultyCreate, db: AsyncSession = Depends(get_db),current_user=Depends(require_role(UserTypeEnum.FACULTY))):
     return await faculty_crud.create_faculty(db, faculty,current_user)
 
 
 
-@router.get("/{faculty_id}", response_model=FacultyRead)
+@router.get("/{faculty_id}")
 async def get_faculty(faculty_id: int, db: AsyncSession = Depends(get_db),_=Depends(get_verified_user)):
-    faculty = await faculty_crud.get_faculty(db, faculty_id)
-    if not faculty:
-        raise HTTPException(status_code=404, detail="Faculty not found")
-    return faculty
+    return await faculty_crud.get_faculty(db, faculty_id)
+    
 
 
-
-@router.put("/{faculty_id}", response_model=FacultyRead)
+@router.put("/{faculty_id}")
 async def update_faculty(faculty_id: int, faculty: FacultyUpdate, db: AsyncSession = Depends(get_db),current_user=Depends(require_role(UserTypeEnum.FACULTY))):
-    updated = await faculty_crud.update_faculty(db, faculty_id, faculty,current_user)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Faculty not found")
-    return updated
+    return await faculty_crud.update_faculty(db, faculty_id, faculty,current_user)
+    
 
 
 
 @router.delete("/{faculty_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_faculty(faculty_id: int, db: AsyncSession = Depends(get_db)):
-    deleted = await faculty_crud.delete_faculty(db, faculty_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Faculty not found")
+    return await faculty_crud.delete_faculty(db, faculty_id)
+    
+    
