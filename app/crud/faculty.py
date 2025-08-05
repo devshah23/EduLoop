@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import delete, select
 
 from app.auth.password import get_password_hash
 from app.models.faculty_model import Faculty
@@ -56,10 +56,7 @@ async def update_faculty(db: AsyncSession, faculty_id: int, faculty_data: Facult
 
 @exception_handler()
 async def delete_faculty(db: AsyncSession, faculty_id: int):
-    result = await db.execute(select(Faculty).where(Faculty.id == faculty_id))
-    faculty = result.scalar_one_or_none()
-    if not faculty:
-        raise HTTPException(status_code=404, detail="Faculty not found") 
-    await db.delete(faculty)
+    await db.execute(delete(Faculty).where(Faculty.id == faculty_id))
+    
     await db.commit()
     return JSONResponse(status_code=204, content={"message": "Faculty deleted successfully"})

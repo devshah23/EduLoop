@@ -10,3 +10,4 @@ passlib[bcrypt]
 bcrypt==3.2.0
 orjson
 huggingface_hub
+redis

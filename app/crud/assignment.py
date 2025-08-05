@@ -1,12 +1,14 @@
 from datetime import datetime, timezone
-from re import A
-from turtle import st
+import json
 from fastapi import HTTPException
-from fastapi.responses import JSONResponse, ORJSONResponse
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import  ORJSONResponse
+from ..utils.helper import convert_to_redis_data, get_assignment_cache_key
+from sqlalchemy import and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
+from ..service.redis_client import r
 from sqlalchemy.orm import selectinload
-from app.auth.roles import require_role
 from app.models.assignment_model import Assignment
 from app.models.question_model import Question
 from app.schemas.assignment_schema import AssignmentCreate, AssignmentOut, AssignmentRead, AssignmentUpdate
@@ -35,24 +37,45 @@ async def create_assignment(
 
     db.add(new_assignment)
     await db.commit()
-    await db.refresh(new_assignment)
-    
-    return JSONResponse(
+    full_assignment=await db.execute(select(Assignment).where(Assignment.id == new_assignment.id).options(selectinload(Assignment.questions)))
+    full_assignment = full_assignment.scalar_one_or_none()
+    res= ORJSONResponse(
         status_code=201,
         content={
             "message": "Assignment created successfully",
-            "assignment_id":new_assignment.id
+            "assignment_id":AssignmentRead.model_validate(full_assignment).model_dump()
         }
     )
+    if full_assignment:
+        await r.setex(get_assignment_cache_key(full_assignment.id), 60 * 60 * 24, convert_to_redis_data(AssignmentRead,full_assignment))
+    return res
 
 
 @exception_handler()
 async def get_assignment(db: AsyncSession, assignment_id: int):
+    cache_key= get_assignment_cache_key(assignment_id)
+    cached = await r.get(cache_key)
+    if cached:
+        return ORJSONResponse(
+            status_code=200,
+            content={
+                "message": "Assignment retrieved from cache",
+                "assignment": json.loads(cached)
+            }
+        )
+    
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id).options(selectinload(Assignment.questions)))
     assignment= result.scalar_one_or_none()
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
-    return assignment
+    await r.setex(get_assignment_cache_key(assignment_id), 60 * 60 * 24, convert_to_redis_data(AssignmentRead,assignment))
+    return ORJSONResponse(
+        status_code=200,
+        content={
+            "message": "Assignment retrieved successfully",
+            "assignment": AssignmentRead.model_validate(assignment).model_dump()
+        }
+    )
 
 @exception_handler()
 async def get_assignments(db: AsyncSession,page):
@@ -61,7 +84,6 @@ async def get_assignments(db: AsyncSession,page):
 )
     assignments = result.scalars().all()
 
-    #Custom method to convert QuestionObject to List of IDs 
     assignments_data = [AssignmentOut.from_orm_with_ids(a).model_dump() for a in assignments] 
 
     return ORJSONResponse(
@@ -90,7 +112,7 @@ async def get_assignments_by_me(db:AsyncSession,current_user:CurrentUser,page:in
 async def get_assignments_for_me(db: AsyncSession, current_user: CurrentUser, page: int):
     result = await db.execute(
         select(Assignment)
-        .where(Assignment.class_id == current_user.class_id)
+        .where(and_(Assignment.class_id == current_user.class_id, Assignment.due_date >= datetime.now(timezone.utc)))
         .options(selectinload(Assignment.questions).load_only(Question.id))
         .order_by(Assignment.created_at.desc()).offset((page-1)*10).limit(10)
     )
@@ -115,7 +137,6 @@ async def update_assignment(
         .options(selectinload(Assignment.questions))
     )
     assignment = result.scalar_one_or_none()
-    
     
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
@@ -142,7 +163,7 @@ async def update_assignment(
 
     await db.commit()
     await db.refresh(assignment)
-
+    await r.setex(get_assignment_cache_key(assignment_id), 60 * 60 * 24, convert_to_redis_data(AssignmentRead,assignment))
     return ORJSONResponse(
         status_code=200,
         content={
@@ -155,13 +176,10 @@ async def update_assignment(
 
 @exception_handler()
 async def delete_assignment(db: AsyncSession, assignment_id: int):
-    result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
-    assignment = result.scalar_one_or_none()
-    if not assignment:
-        raise HTTPException(status_code=404,detail="Assignment not found")
-    if assignment:
-        await db.delete(assignment)
-        await db.commit()
+    await db.execute(delete(Assignment).where(Assignment.id == assignment_id))
+    
+    await db.commit()
+    await r.delete(get_assignment_cache_key(assignment_id))
     return ORJSONResponse(
         status_code=200,
         content={

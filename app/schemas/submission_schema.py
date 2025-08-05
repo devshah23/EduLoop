@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from datetime import datetime, timezone
+from pydantic import BaseModel
+from datetime import datetime
 from typing import  Optional, List
 
 
@@ -14,8 +14,6 @@ class SubmissionBase(BaseModel):
     grade: Optional[float] = None
     
 
-
-
 class SubmissionCreate(SubmissionBase):
     question_answers: List[Questions_Answers] = []
     
@@ -26,8 +24,9 @@ class SubmissionRead(SubmissionBase):
     id: int
     submitted_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class SubmissionReadWithAnswers(SubmissionRead):
     submitted_answers: List[int] = [] 

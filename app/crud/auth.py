@@ -9,7 +9,7 @@ from app.auth.password import get_password_hash, verify_password
 from app.models.class_model import Class
 from app.models.faculty_model import Faculty
 from app.models.student_model import Student
-from app.schemas.auth_schema import CurrentUser, LoginRequest, SignupRequest, UserTypeEnum
+from app.schemas.auth_schema import CurrentUser, LoginRequest, SignupFacultyRequest, SignupRequest, UserTypeEnum
 from app.utils.exception import AppException, exception_handler
 from os import getenv
 from sqlalchemy.orm import selectinload
@@ -21,28 +21,29 @@ async def get_student_by_email( db: AsyncSession,email: str,):
     return result.scalar_one_or_none()
 
 async def get_faculty_by_email( db: AsyncSession,email: str) -> Faculty | None:
-    result = await db.execute(select(Faculty).options(selectinload(Faculty.class_details)).where(Faculty.email == email))  
+    result = await db.execute(select(Faculty).where(Faculty.email == email).options(selectinload(Faculty.class_details)))  
     return result.scalar_one_or_none()
 
 @exception_handler()
 async def login(db: AsyncSession,request_data: LoginRequest):
     user=None
-    if request_data.role== UserTypeEnum.FACULTY.value:
+    if request_data.role== UserTypeEnum.FACULTY:
         user=await get_faculty_by_email(db, request_data.email)
 
-    if request_data.role == UserTypeEnum.STUDENT.value:
+    if request_data.role == UserTypeEnum.STUDENT:
         user = await get_student_by_email(db, request_data.email)
 
     if not user or not verify_password(request_data.password, user.password):
-        raise AppException(status_code=status.HTTP_401_UNAUTHORIZED, message="Incorrect email or password",code="AUTH_ERROR")
+        raise AppException(status_code=status.HTTP_401_UNAUTHORIZED, message="Incorrect role,email or password",code="AUTH_ERROR")
     
     token_data={"id":user.id,"email":user.email,"name":user.name}
-    if(request_data.role==UserTypeEnum.FACULTY.value):
-        token_data["role"]=UserTypeEnum.FACULTY.value
+    print(request_data.role)
+    if(request_data.role==UserTypeEnum.FACULTY):
+        token_data["role"]=UserTypeEnum.FACULTY
         token_data["class_id"]=user.class_details.id
     else:
         student = cast(Student, user)
-        token_data["role"]=UserTypeEnum.STUDENT.value
+        token_data["role"]=UserTypeEnum.STUDENT
         token_data["class_id"]=student.class_id
 
     value = create_access_token(data=token_data)
@@ -51,7 +52,7 @@ async def login(db: AsyncSession,request_data: LoginRequest):
     return response
 
 @exception_handler()
-async def signup( db: AsyncSession,request_data: SignupRequest):
+async def signup( db: AsyncSession,request_data: SignupRequest,current_user: CurrentUser):
     existing_student=await get_student_by_email(db, request_data.email)
     if existing_student:
         raise AppException(status_code=status.HTTP_400_BAD_REQUEST, message="Email already exists", code="EMAIL_EXISTS")
@@ -67,12 +68,30 @@ async def signup( db: AsyncSession,request_data: SignupRequest):
         email=request_data.email,
         name=request_data.name,
         class_id=exist_class.id,
-        password=hashed_password
+        password=hashed_password,
+        updated_by=current_user.id
     )
     db.add(new_student)
     await db.commit()
-    await db.refresh(new_student)
-    response= JSONResponse(content={"message": "Signup successful"}, status_code=status.HTTP_201_CREATED)
+    response= JSONResponse(content={"message": "Student Account Creation successful"}, status_code=status.HTTP_201_CREATED)
+    return response
+
+@exception_handler()
+async def create_faculty( db: AsyncSession,request_data: SignupFacultyRequest,current_user: CurrentUser):
+    existing_faculty=await get_faculty_by_email(db, request_data.email)
+    if existing_faculty:
+        raise AppException(status_code=status.HTTP_400_BAD_REQUEST, message="Email already exists", code="EMAIL_EXISTS")
+    
+    hashed_password=get_password_hash(request_data.password)
+    new_faculty = Faculty(
+        email=request_data.email,
+        name=request_data.name,
+        password=hashed_password,
+        updated_by=current_user.id
+    )
+    db.add(new_faculty)
+    await db.commit()
+    response= JSONResponse(content={"message": "Faculty Account Creation successful"}, status_code=status.HTTP_201_CREATED)
     return response
 
 @exception_handler()
@@ -90,7 +109,6 @@ async def update_student(db: AsyncSession,request_data,id:int,current_user:Curre
         setattr(student, field, value)
     student.updated_by = current_user.id
     await db.commit()
-    await db.refresh(student)
     
     return JSONResponse(content={"message": "Student updated successfully"}, status_code=status.HTTP_200_OK)
     

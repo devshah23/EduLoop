@@ -1,10 +1,7 @@
 import os
-from fastapi import Depends
 from huggingface_hub import InferenceClient
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.db.session import AsyncSessionLocal, get_db
+from app.db.session import AsyncSessionLocal
 from app.models.submission_model import Submission
 
 HF_TOKEN=os.getenv('HF_TOKEN')
@@ -15,7 +12,7 @@ client = InferenceClient(
     api_key=HF_TOKEN
 )
 
-async def grade_sumbmission(correct_answer: list, student_answer: list,submission_id:int):
+async def grade_submission(correct_answer: list, student_answer: list,submission_id:int):
     per_question_result=[]
     async with AsyncSessionLocal() as db:
         try:
@@ -40,7 +37,7 @@ async def grade_sumbmission(correct_answer: list, student_answer: list,submissio
                 return -1
             submission.grade=avg
             await db.commit()
-            await db.refresh(submission)
+            return 1
         except Exception as e:
             print(f"Error while grading submission: {e}")
             return -1  

@@ -1,6 +1,6 @@
 
 from fastapi.responses import JSONResponse
-from sqlalchemy.future import select
+from sqlalchemy import select
 from fastapi import Depends, HTTPException
 from app.auth.roles import require_role
 from app.models.assignment_model import Assignment
@@ -10,7 +10,7 @@ from app.models.submission_model import Submission
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.submitted_answer_model import SubmittedAnswer
-from app.service.submission_grade import grade_sumbmission
+from app.service.submission_grade import grade_submission
 
 
 async def retry_grading(db:AsyncSession,submission_id:int):
@@ -27,17 +27,17 @@ async def retry_grading(db:AsyncSession,submission_id:int):
     assignment.questions.sort(key=lambda q: q.id)
     student_answer=[q.text for q in submission.submitted_answers]
     correct_answer=[q.answer for q in assignment.questions]
-    result = await grade_sumbmission(correct_answer,student_answer,submission_id)
-    if not result:
-        return JSONResponse(status_code=200,content={
+    result = await grade_submission(correct_answer,student_answer,submission_id)
+    if result == -1:
+        return JSONResponse(
+            status_code=400,
+            content={
+            "message":"Something went wrong"
+            }
+        )
+    return JSONResponse(status_code=200,content={
             "message":"Result Updated Successfully"
         })
-    return JSONResponse(
-        status_code=400,
-        content={
-            "message":"Something went wrong"
-        }
-    )
     
     
     

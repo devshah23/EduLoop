@@ -1,11 +1,8 @@
 from datetime import datetime
 from typing import List
 from sqlalchemy import DateTime, ForeignKey, String, func
-
 from .question_model import Question, assignment_question_association
-
 from .faculty_model import Faculty
-from .class_model import Class
 from ..db.base import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

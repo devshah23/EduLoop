@@ -1,3 +1,7 @@
+from functools import wraps
+from fastapi import HTTPException, status
+from redis import RedisError
+from sqlalchemy.exc import SQLAlchemyError,IntegrityError
 class AppException(Exception):
     def __init__(self, message: str, status_code: int = 400, code: str = "APP_ERROR"):
         self.message = message
@@ -5,10 +9,6 @@ class AppException(Exception):
         self.code = code
 
 
-from functools import wraps
-import asyncpg.exceptions
-from fastapi import HTTPException, status
-from sqlalchemy.exc import SQLAlchemyError,IntegrityError
 
 def exception_handler():
     def decorator(func):
@@ -37,7 +37,12 @@ def exception_handler():
                     detail=str(e),
                     
                 ) from e
-
+            except RedisError as e:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Redis service is unavailable. Please try again later.",
+                ) from e
+                
             except Exception as e:
                 if db:
                     await db.rollback()

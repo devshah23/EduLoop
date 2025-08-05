@@ -1,7 +1,5 @@
 from typing import Optional
 from pydantic import BaseModel, EmailStr
-
-
 from enum import Enum
 
 class UserTypeEnum(str, Enum):
@@ -18,6 +16,12 @@ class SignupRequest(BaseModel):
     password: str
     name: str
     class_id: int | None = None 
+    
+
+class SignupFacultyRequest(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
 
 class UpdateStudent(BaseModel):
     name:Optional[str]
@@ -34,5 +38,6 @@ class CurrentUser(BaseModel):
     class_id: Optional[int]  = None
     exp:int
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }

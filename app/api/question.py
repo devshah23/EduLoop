@@ -28,6 +28,6 @@ async def update_question(question_id: int, question: QuestionUpdate, db: AsyncS
     
 
 
-@router.delete("/{question_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{question_id}")
 async def delete_question(question_id: int, db: AsyncSession = Depends(get_db),):
     return await question_crud.delete_question(db, question_id)

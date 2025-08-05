@@ -21,5 +21,6 @@ class FacultyUpdate(BaseModel):
     updated_by: Optional[int] = None
 
 class FacultyRead(FacultyInDB):
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }

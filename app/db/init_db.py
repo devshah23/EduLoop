@@ -1,4 +1,3 @@
-# app/db/init_db.py
 import asyncio
 from app.db.session import engine
 from .base import Base
