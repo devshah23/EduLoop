@@ -63,11 +63,7 @@ HF_TOKEN=your-huggingface-api-token
 
 ## 🛢️ Database Initialization
 
-Before running the server, initialize the database:
-
-```bash
-python init_db.py
-```
+Before running the server, initialize the database.Use the init_db.py file given in the db folders for initialziation.
 
 This script uses SQLAlchemy to create all the required tables in your Supabase PostgreSQL database.
 
