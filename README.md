@@ -15,6 +15,7 @@ EduLoop is an assignment submission and auto-grading platform built with **FastA
 
 ---
 
+
 ## ⚙️ Requirements
 
 - Redis (local or Docker-based)
@@ -27,35 +28,36 @@ EduLoop is an assignment submission and auto-grading platform built with **FastA
 
 ## 📦 Setup Instructions
 
+
 ### 1. Create and Activate Virtual Environment
 
-\`\`\`bash
+```bash
 python -m venv .venv
-source .venv/bin/activate # On Windows: .venv\Scripts\activate
-\`\`\`
+source .venv/bin/activate        # On Windows: .venv\Scripts\activate
+```
 
 ### 2. Install Required Dependencies
 
-\`\`\`bash
+```bash
 pip install -r requirements.txt
-\`\`\`
+```
 
 ### 3. Configure Environment Variables
 
-Copy the sample \`.env.example\` and create the .env file:
+Copy the sample \`.env.example\` and create the .env file.
 
-Then open \`.env\` and fill in values like:
 
-\`\`\`dotenv
-SUPABASE_DB_URL=postgresql://your_user:your_password@your_host:5432/your_database
+```dotenv
+DATABASE_URL=supabase url
 REDIS_HOST=localhost
 REDIS_PORT=6379
+ALGORITHM=HS256
 COOKIE_NAME=SubmitAssignment
 SECRET_KEY=your-secret-key
 HF_TOKEN=your-huggingface-api-token
-\`\`\`
+```
 
-> ⚠️ \`HF_TOKEN\` is **mandatory** for enabling the auto-grading feature using Hugging Face models.
+> ⚠️ `HF_TOKEN` is **mandatory** for enabling the auto-grading feature using Hugging Face models.
 
 ---
 
@@ -63,9 +65,9 @@ HF_TOKEN=your-huggingface-api-token
 
 Before running the server, initialize the database:
 
-\`\`\`bash
+```bash
 python init_db.py
-\`\`\`
+```
 
 This script uses SQLAlchemy to create all the required tables in your Supabase PostgreSQL database.
 
@@ -75,38 +77,38 @@ This script uses SQLAlchemy to create all the required tables in your Supabase P
 
 If you don't have Redis installed locally, you can run it via Docker:
 
-\`\`\`bash
+```bash
 docker run -d -p 6379:6379 --name redis redis
-\`\`\`
+```
 
-Ensure your \`.env\` has these matching:
+Ensure your `.env` has these matching:
 
-\`\`\`dotenv
+```dotenv
 REDIS_HOST=localhost
 REDIS_PORT=6379
-\`\`\`
+```
 
 ---
 
 ## ▶️ Run the FastAPI Server
 
-\`\`\`bash
+```bash
 uvicorn app.main:app --reload
-\`\`\`
+```
 
 Server will start at:
 
-\`\`\`
+```
 http://localhost:8000
-\`\`\`
+```
 
 ---
 
 ## 📮 API Usage & Testing
 
-- You can import the **Postman Collection** shared in the repository to test endpoints easily.
+- You can import the **Postman Collection** shared in the repository to test endpoints easily. It is written with in-depth documentation about each endpoint.
 
----
+
 
 ## 🛡️ License
 
