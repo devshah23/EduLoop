@@ -16,12 +16,16 @@ async def create_class(class_: ClassCreate, db: AsyncSession = Depends(get_db),c
 
 
 
+@router.get("/all")
+async def get_all_classes(db: AsyncSession = Depends(get_db), _: dict = Depends(get_verified_user)):
+    classes = await class_crud.get_all_classes(db)
+    return classes
+
 
 @router.get("/{class_id}")
 async def get_class(class_id: int, db: AsyncSession = Depends(get_db),_: dict = Depends(get_verified_user)):
     class_obj = await class_crud.get_class(db, class_id)
     return class_obj
-
 
 
 

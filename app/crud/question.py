@@ -1,9 +1,7 @@
 from fastapi import HTTPException,status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func, select
 from app.models.question_model import Question
 from app.schemas.question_schema import QuestionCreate, QuestionRead, QuestionUpdate
 from app.utils.exception import exception_handler
@@ -31,6 +29,25 @@ async def get_question(db: AsyncSession, question_id: int):
         status_code=status.HTTP_200_OK,
         content={"message": "Question retrieved successfully", "question": QuestionRead.model_validate(question).model_dump()})
 
+@exception_handler()
+async def get_questions_paginated(db:AsyncSession, page:int=1):
+    if page < 1:
+        raise HTTPException(status_code=400, detail="Page number must be greater than 0")
+    total_count = await db.execute(select(func.count()).select_from(Question))
+    total_count = total_count.scalar_one()
+    if page > (total_count // 10) + (1 if total_count % 10 > 0 else 0):
+        raise HTTPException(status_code=404, detail="No questions found for the requested page")
+    
+    result=await db.execute(select(Question).offset((page-1)*10).limit(10))
+    questions = result.scalars().all()
+    if not questions:
+        raise HTTPException(status_code=404, detail="No questions found")
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"questions":[QuestionRead.model_validate(question).model_dump() for question in questions],
+                 "page": page,
+                 "total_pages": (total_count // 10) + (1 if total_count % 10 > 0 else 0),
+                 })
 
 @exception_handler()
 async def update_question(db: AsyncSession, question_id: int, question_data: QuestionUpdate):

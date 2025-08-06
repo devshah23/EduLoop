@@ -22,8 +22,8 @@ class ClassCreate(ClassBase):
 
 
 class ClassUpdate(BaseModel):
-    name:Optional[TrimmedStr]
-    faculty_id: Optional[int]
+    name:Optional[TrimmedStr]=None
+    faculty_id: Optional[int]=None
 
 class ClassRead(BaseModel):
     id: int
@@ -31,6 +31,16 @@ class ClassRead(BaseModel):
     faculty_id: int
     updated_by: Optional[int] = None
     students:Optional[List[StudentRead]]
+    faculty:Optional[FacultyRead]
+    model_config = {
+        "from_attributes": True,
+    }
+    
+class MultiClassRead(BaseModel):
+    id: int
+    name: TrimmedStr
+    faculty_id: int
+    updated_by: Optional[int] = None
     faculty:Optional[FacultyRead]
     model_config = {
         "from_attributes": True,

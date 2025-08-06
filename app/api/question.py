@@ -14,11 +14,15 @@ async def create_question(question: QuestionCreate, db: AsyncSession = Depends(g
     return await question_crud.create_question(db, question)
 
 
+@router.get("/all")
+async def get_questions_paginated(page: int = 1, db: AsyncSession = Depends(get_db)):
+    return await question_crud.get_questions_paginated(db, page)
+
+
 
 @router.get("/{question_id}")
 async def get_question(question_id: int, db: AsyncSession = Depends(get_db)):
     return await question_crud.get_question(db, question_id)
-   
 
 
 

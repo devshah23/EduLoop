@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, StringConstraints, field_validator
+from pydantic import BaseModel, EmailStr, StringConstraints
 from typing import Annotated, List, Optional
 from app.schemas.submission_schema import SubmissionRead
 
@@ -22,10 +22,12 @@ class StudentCreate(StudentBase):
 
 
 
-class StudentUpdate(StudentBase):
-    name: Optional[TrimmedStr]
-    email: Optional[EmailStr]
-    password: Optional[str]
+class StudentUpdate(BaseModel):
+    name: Optional[str]=None
+    email: Optional[EmailStr]=None
+    password: Optional[str]=None
+    updated_by:Optional[int]=None
+    class_id:Optional[int]=None
     
     
 

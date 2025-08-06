@@ -96,8 +96,11 @@ async def get_assignments(db: AsyncSession,page):
 
 @exception_handler()
 async def get_assignments_by_me(db:AsyncSession,current_user:CurrentUser,page:int):
-    result=await db.execute(select(Assignment).where(Assignment.id==current_user.id).options(selectinload(Assignment.questions).load_only(Question.id)).order_by(Assignment.created_at.desc()).offset((page-1)*10).limit(10))
+    result=await db.execute(select(Assignment).where(Assignment.created_by==current_user.id).options(selectinload(Assignment.questions).load_only(Question.id)).order_by(Assignment.created_at.desc()).offset((page-1)*10).limit(10))
     assignments = result.scalars().all()
+    if not assignments:
+        raise HTTPException(status_code=404, detail="No assignments created by you")
+    
     assignments_data = [AssignmentOut.from_orm_with_ids(a).model_dump() for a in assignments]
     return ORJSONResponse(
         status_code=200,
@@ -117,6 +120,14 @@ async def get_assignments_for_me(db: AsyncSession, current_user: CurrentUser, pa
         .order_by(Assignment.created_at.desc()).offset((page-1)*10).limit(10)
     )
     assignments = result.scalars().all()
+    if not assignments:
+        return ORJSONResponse(
+            status_code=200,
+            content={
+                "message": "Hurray, no assignments available for you",
+                "assignments": []
+            }
+        )
     assignments_data = [AssignmentOut.from_orm_with_ids(a).model_dump() for a in assignments]
     return ORJSONResponse(
         status_code=200,
@@ -171,7 +182,6 @@ async def update_assignment(
             "assignment": AssignmentRead.model_validate(assignment).model_dump()
         }
     )
-
 
 
 @exception_handler()

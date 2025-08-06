@@ -10,14 +10,14 @@ from app.models.class_model import Class
 from app.models.faculty_model import Faculty
 from app.models.student_model import Student
 from app.schemas.auth_schema import CurrentUser, LoginRequest, SignupFacultyRequest, SignupRequest, UserTypeEnum
-from app.utils.exception import AppException, exception_handler
+from app.utils.exception import exception_handler
 from os import getenv
 from sqlalchemy.orm import selectinload
 
 COOKIE_NAME=getenv("COOKIE_NAME", "SubmitAssignment")
 
 async def get_student_by_email( db: AsyncSession,email: str,):
-    result = await db.execute(select(Student).where(Student.email == email))
+    result = await db.execute(select(Student).where(Student.email == email).options(selectinload(Student.class_details)))
     return result.scalar_one_or_none()
 
 async def get_faculty_by_email( db: AsyncSession,email: str) -> Faculty | None:
@@ -29,18 +29,18 @@ async def login(db: AsyncSession,request_data: LoginRequest):
     user=None
     if request_data.role== UserTypeEnum.FACULTY:
         user=await get_faculty_by_email(db, request_data.email)
-
     if request_data.role == UserTypeEnum.STUDENT:
         user = await get_student_by_email(db, request_data.email)
-
     if not user or not verify_password(request_data.password, user.password):
-        raise AppException(status_code=status.HTTP_401_UNAUTHORIZED, message="Incorrect role,email or password",code="AUTH_ERROR")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid credentials")
     
     token_data={"id":user.id,"email":user.email,"name":user.name}
-    print(request_data.role)
     if(request_data.role==UserTypeEnum.FACULTY):
         token_data["role"]=UserTypeEnum.FACULTY
-        token_data["class_id"]=user.class_details.id
+        if user.class_details:
+            token_data["class_id"]=user.class_details.id
+        else:
+            token_data["class_id"]=None
     else:
         student = cast(Student, user)
         token_data["role"]=UserTypeEnum.STUDENT
@@ -55,14 +55,15 @@ async def login(db: AsyncSession,request_data: LoginRequest):
 async def signup( db: AsyncSession,request_data: SignupRequest,current_user: CurrentUser):
     existing_student=await get_student_by_email(db, request_data.email)
     if existing_student:
-        raise AppException(status_code=status.HTTP_400_BAD_REQUEST, message="Email already exists", code="EMAIL_EXISTS")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already exists")
     
     class_result=await db.execute(select(Class).where(Class.id == request_data.class_id))
     exist_class=class_result.scalar_one_or_none()
 
     if exist_class is None:
-        raise AppException(status_code=status.HTTP_400_BAD_REQUEST, message="Class not found", code="CLASS_NOT_FOUND")
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Class not found")
+    print(exist_class.id)
+    print("Hello",current_user.email, current_user.id)
     hashed_password=get_password_hash(request_data.password)
     new_student = Student(
         email=request_data.email,
@@ -80,7 +81,7 @@ async def signup( db: AsyncSession,request_data: SignupRequest,current_user: Cur
 async def create_faculty( db: AsyncSession,request_data: SignupFacultyRequest,current_user: CurrentUser):
     existing_faculty=await get_faculty_by_email(db, request_data.email)
     if existing_faculty:
-        raise AppException(status_code=status.HTTP_400_BAD_REQUEST, message="Email already exists", code="EMAIL_EXISTS")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already exists")
     
     hashed_password=get_password_hash(request_data.password)
     new_faculty = Faculty(
@@ -94,27 +95,9 @@ async def create_faculty( db: AsyncSession,request_data: SignupFacultyRequest,cu
     response= JSONResponse(content={"message": "Faculty Account Creation successful"}, status_code=status.HTTP_201_CREATED)
     return response
 
-@exception_handler()
-async def update_student(db: AsyncSession,request_data,id:int,current_user:CurrentUser):
-    result=await db.execute(select(Student).where(Student.id==id))
-    student=result.scalar_one_or_none()
-    if not student:
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found",
-        )
-    
-    request_data.password=get_password_hash(request_data.password) if request_data.password else student.password
-    for field, value in request_data.dict(exclude_unset=True).items():
-        setattr(student, field, value)
-    student.updated_by = current_user.id
-    await db.commit()
-    
-    return JSONResponse(content={"message": "Student updated successfully"}, status_code=status.HTTP_200_OK)
-    
 
 @exception_handler()
-def logout():
+async def logout():
     response = JSONResponse(content={"message": "Logout successful"}, status_code=status.HTTP_200_OK)
     response.delete_cookie(COOKIE_NAME)
     return response

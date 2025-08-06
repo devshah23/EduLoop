@@ -22,9 +22,8 @@ async def create_faculty(db: AsyncSession, faculty_data: FacultyCreate,current_u
     db.add(new_faculty)
     await db.commit()
     await db.refresh(new_faculty)
-    faculty_return=FacultyRead.model_validate(new_faculty)
+    faculty_return=FacultyRead.model_validate(new_faculty).model_dump()
     return JSONResponse(status_code=201,content={"message":"Faculty created successfully", "faculty": faculty_return})
-
 
 
 @exception_handler()
@@ -33,8 +32,16 @@ async def get_faculty(db: AsyncSession, faculty_id: int):
     faculty=result.scalar_one_or_none()
     if not faculty:
         raise HTTPException(status_code=404, detail="Faculty not found")
-    return JSONResponse(status_code=200,content={"faculty":FacultyRead.model_validate(faculty)})
+    return JSONResponse(status_code=200,content={"faculty":FacultyRead.model_validate(faculty).model_dump()})
 
+@exception_handler()
+async def get_all_faculties(db: AsyncSession):
+    result = await db.execute(select(Faculty))
+    faculties = result.scalars().all()
+    if not faculties:
+        raise HTTPException(status_code=404, detail="No faculties found")
+    
+    return JSONResponse(status_code=200, content={"faculties": [FacultyRead.model_validate(faculty).model_dump() for faculty in faculties]})
 
 
 @exception_handler()
@@ -51,7 +58,7 @@ async def update_faculty(db: AsyncSession, faculty_id: int, faculty_data: Facult
         setattr(faculty, key, value)
     await db.commit()
     await db.refresh(faculty)
-    return JSONResponse(status_code=200, content={"message": "Faculty updated successfully", "faculty": FacultyRead.model_validate(faculty)})
+    return JSONResponse(status_code=200, content={"message": "Faculty updated successfully", "faculty": FacultyRead.model_validate(faculty).model_dump()})
 
 
 @exception_handler()

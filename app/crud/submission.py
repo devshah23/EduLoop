@@ -24,8 +24,6 @@ async def create_submission(db: AsyncSession,background_task:BackgroundTasks, su
             status_code=404,
             detail="Assignment not found for submission"
         )
-    assignment.questions.sort(key=lambda q: q.id)
-    submission_data.question_answers.sort(key=lambda qa: qa.question_id)
     
     # Check for current student is submitting for themselves
     if(current_user.id!=submission_data.student_id):
@@ -34,6 +32,11 @@ async def create_submission(db: AsyncSession,background_task:BackgroundTasks, su
             detail="You are not allowed to submit for other student."
         )
         
+    if assignment.class_id != current_user.class_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to submit for this assignment."
+        )
     # Check if the student has already submitted for this assignment
     existing_submission = (await db.scalars(
     select(Submission)
@@ -57,6 +60,8 @@ async def create_submission(db: AsyncSession,background_task:BackgroundTasks, su
         status_code=400,
         detail="Submission is not accepted after due date."
     )
+    assignment.questions.sort(key=lambda q: q.id)
+    submission_data.question_answers.sort(key=lambda qa: qa.question_id)
     # Invalid questions details provided
     question_ids = {qa.question_id for qa in submission_data.question_answers}
     existing_ids = {q.id for q in assignment.questions}
@@ -122,7 +127,7 @@ async def get_submission(db: AsyncSession, submission_id: int,current_user):
                 "message": "You are not allowed to view other's submission."
             }
         )
-    return JSONResponse(
+    return ORJSONResponse(
         status_code=200,
         content={"submission":SubmissionRead.model_validate(submission).model_dump()})
 

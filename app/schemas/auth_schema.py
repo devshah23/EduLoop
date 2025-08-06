@@ -24,10 +24,10 @@ class SignupFacultyRequest(BaseModel):
     name: str
 
 class UpdateStudent(BaseModel):
-    name:Optional[str]
-    class_id:Optional[int]
-    email:Optional[EmailStr]
-    password: Optional[str]
+    name:Optional[str]=None
+    class_id:Optional[int]=None
+    email:Optional[EmailStr]=None
+    password: Optional[str]=None
     
 
 class CurrentUser(BaseModel):

@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy import delete
 from sqlalchemy.orm import selectinload
 from app.models.class_model import Class
-from app.schemas.class_schema import ClassCreate, ClassRead, ClassUpdate, ClassUpdateRead
+from app.schemas.class_schema import ClassCreate, ClassRead, ClassUpdate, ClassUpdateRead, MultiClassRead
 from app.utils.exception import exception_handler
 from ..utils.helper import convert_to_redis_data, get_class_cache_key
 from ..service.redis_client import r
@@ -37,6 +37,14 @@ async def get_class(db: AsyncSession, class_id: int):
     
     return JSONResponse(status_code=200, content={"class": ClassRead.model_validate(class_).model_dump()})
 
+@exception_handler()
+async def get_all_classes(db: AsyncSession):
+    result = await db.execute(select(Class).options(selectinload(Class.faculty)))
+    classes = result.scalars().all()
+    if not classes:
+        raise HTTPException(status_code=404, detail="No classes found")
+    classes_data = [MultiClassRead.model_validate(class_).model_dump() for class_ in classes]
+    return JSONResponse(status_code=200, content={"classes": classes_data})
 
 @exception_handler()
 async def update_class(db: AsyncSession, class_id: int, class_data: ClassUpdate):
