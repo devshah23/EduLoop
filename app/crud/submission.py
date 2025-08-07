@@ -5,11 +5,12 @@ from fastapi.responses import JSONResponse, ORJSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+from app.models.student_model import Student
 from app.models.submitted_answer_model import SubmittedAnswer
 from app.models.assignment_model import Assignment
 from app.models.submission_model import Submission
 from app.schemas.auth_schema import CurrentUser, UserTypeEnum
-from app.schemas.submission_schema import SubmissionCreate, SubmissionRead
+from app.schemas.submission_schema import SubmissionCreate, SubmissionRead, SubmissionReadListWithStudentID
 from app.service.submission_grade import grade_submission
 from app.utils.exception import exception_handler
 
@@ -190,4 +191,37 @@ async def get_submission_sorted(db:AsyncSession,student_id:int,current_user:Curr
         status_code=200,
         content={
             "submissions": [SubmissionRead.model_validate(submission).model_dump() for submission in submissions]
+        })
+
+@exception_handler()
+async def get_assignment_submissions(db:AsyncSession,assignment_id:int,current_user:CurrentUser):
+    if current_user.role != UserTypeEnum.FACULTY:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to view class submissions."
+        )
+    
+    result = await db.execute(
+        select(Submission).where(Submission.assignment_id==assignment_id).options(selectinload(Submission.student).load_only(Student.id))
+    )
+    submissions= result.scalars().all()
+    
+    if not submissions:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "message": "Not submissions found for the given assignment."
+            }
+        )
+    response = [
+    SubmissionReadListWithStudentID(
+        **SubmissionRead.model_validate(s).model_dump(),
+        student_id=s.student.id
+    )
+    for s in submissions
+]
+    return ORJSONResponse(
+        status_code=200,
+        content={
+            "submissions": response
         })

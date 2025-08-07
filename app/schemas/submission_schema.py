@@ -27,6 +27,15 @@ class SubmissionRead(SubmissionBase):
     model_config = {
         "from_attributes": True
     }
+class SubmissionReadListWithStudentID(SubmissionRead):
+    id: int
+    submitted_at: datetime
+    student_id: int
+
+    model_config = {
+        "from_attributes": True
+    }
+
 
 class SubmissionReadWithAnswers(SubmissionRead):
     submitted_answers: List[int] = [] 

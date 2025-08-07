@@ -20,6 +20,10 @@ async def get_student_submission(student_id: int, db: AsyncSession = Depends(get
     return await submission_crud.get_student_submission(db, student_id)
 
 
+@router.get("/assign-list/{assignment_id}")
+async def get_assignment_submissions(assignment_id: int, db: AsyncSession = Depends(get_db), current_user=Depends(require_role(UserTypeEnum.FACULTY))):
+    return await submission_crud.get_assignment_submissions(db, assignment_id, current_user)
+
 @router.get("/list/{student_id}")
 async def submissions_sort(
     student_id: int,
