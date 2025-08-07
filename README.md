@@ -15,7 +15,6 @@ EduLoop is an assignment submission and auto-grading platform built with **FastA
 
 ---
 
-
 ## ⚙️ Requirements
 
 - Redis (local or Docker-based)
@@ -27,7 +26,6 @@ EduLoop is an assignment submission and auto-grading platform built with **FastA
 ---
 
 ## 📦 Setup Instructions
-
 
 ### 1. Create and Activate Virtual Environment
 
@@ -45,7 +43,6 @@ pip install -r requirements.txt
 ### 3. Configure Environment Variables
 
 Copy the sample \`.env.example\` and create the .env file.
-
 
 ```dotenv
 DATABASE_URL=supabase url
@@ -77,11 +74,10 @@ If you don't have Redis installed locally, you can run it via Docker:
 docker run -d -p 6379:6379 --name redis redis
 ```
 
-Ensure your `.env` has these matching:
+Ensure your `.env` has the matching:
 
 ```dotenv
-REDIS_HOST=localhost
-REDIS_PORT=6379
+REDIS_URL
 ```
 
 ---
@@ -103,8 +99,6 @@ http://localhost:8000
 ## 📮 API Usage & Testing
 
 - You can import the **Postman Collection** shared in the repository to test endpoints easily. It is written with in-depth documentation about each endpoint.
-
-
 
 ## 🛡️ License
 
