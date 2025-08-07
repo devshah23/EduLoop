@@ -1,5 +1,4 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.pool import QueuePool
 import os
 
 DATABASE_URL = os.getenv("DATABASE_URL","")
@@ -10,8 +9,7 @@ if not DATABASE_URL:
 engine = create_async_engine(
     DATABASE_URL,
     future=True,
-    connect_args={"ssl": "require"},
-    poolclass=QueuePool,           
+    connect_args={"ssl": "require"},       
     pool_size=10,
     max_overflow=5,
     pool_recycle=300,
